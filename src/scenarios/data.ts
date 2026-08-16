@@ -1,6 +1,7 @@
 import { generateActionPlanDoc } from "../artifacts/actionPlanDoc";
 import { generateCustomerWorkbook } from "../artifacts/customerWorkbook";
 import { generateCxRiskReviewPdf } from "../artifacts/cxRiskReviewPdf";
+import { generateHermesIncidentWorkbook } from "../artifacts/hermesIncidentWorkbook";
 import type { Scenario } from "./types";
 
 export const SCENARIOS: Scenario[] = [
@@ -203,6 +204,183 @@ export const SCENARIOS: Scenario[] = [
         },
       ],
     },
+  },
+
+  {
+    id: "support-staffing-variance",
+    kind: "choice",
+    title: "Support Staffing Variance",
+    priority: "MEDIUM",
+    availableFromPeriod: 2,
+    executiveMessage:
+      "Support backlog is climbing and average wait time is up.\n" +
+      "Pick one and let's move on before the QBR.",
+    choices: [
+      {
+        id: "add-staff",
+        label: "1=Add staff (2 FTE)",
+        immediate: { profit: -6, supportBacklog: -20, customerHealth: 5 },
+        resultText:
+          "HEADCOUNT REQUEST APPROVED.\n\n" +
+          "Profit -6. Support Backlog -20. Customer Health +5.\n\n" +
+          "Finance noted the request. No further comment.",
+      },
+      {
+        id: "outsource",
+        label: "2=Outsource support queue",
+        immediate: { efficiency: 8, profit: 2, supportBacklog: -15 },
+        delayed: [
+          {
+            periodsLater: 3,
+            label: "Outsourced support quality complaints reach Customer Ops",
+            effects: { complaints: 12, customerHealth: -10 },
+          },
+        ],
+        resultText:
+          "OUTSOURCING VENDOR ENGAGED.\n\n" +
+          "Efficiency +8. Profit +2. Support Backlog -15.\n\n" +
+          "CPF9898 PROCESS OPTIMIZED SUCCESSFULLY.",
+      },
+      {
+        id: "automate",
+        label: "3=Automate intake (chatbot triage)",
+        immediate: { efficiency: 14, profit: 4, supportBacklog: -10, executiveConfidence: 6 },
+        delayed: [
+          {
+            periodsLater: 3,
+            label: "Automated intake misroutes complex cases; churn increases",
+            effects: { churn: 6, complaints: 8 },
+          },
+        ],
+        resultText:
+          "STRATEGIC INITIATIVE LAUNCHED: INTAKE AUTOMATION.\n\n" +
+          "Efficiency +14. Profit +4. Support Backlog -10.\n\n" +
+          "Executive Confidence +6 (unscheduled bonus for innovation).",
+      },
+      {
+        id: "change-sla",
+        label: "4=Change SLA target (48h -> 72h)",
+        immediate: { supportBacklog: -25, executiveConfidence: 5 },
+        resultText:
+          "SLA TARGET UPDATED.\n\n" +
+          "Support Backlog KPI: GREEN.\n" +
+          "Customer wait times unchanged.\n\n" +
+          "(Nothing about the actual wait time changed. The number reported did.)",
+      },
+    ],
+  },
+
+  {
+    id: "hermes-004",
+    kind: "document-review",
+    title: "Security Incident: Board Metrics",
+    priority: "URGENT",
+    availableFromPeriod: 5,
+    executiveMessage:
+      "SECURITY INCIDENT ACTIVE\n\n" +
+      "Document integrity cannot be guaranteed.\n\n" +
+      "Management requires the SEP churn projection before\n" +
+      "the review may continue.",
+    artifacts: [{ filename: "BOARD_METRICS_Q3.xls", generate: generateHermesIncidentWorkbook }],
+    questions: [
+      {
+        id: "projection",
+        prompt: "Projected SEP churn (using the visible trend):",
+        answer: "9.6%",
+        aliases: ["9.6", "09.6%", "9.6 %"],
+      },
+    ],
+    onCorrect: {
+      immediate: { institutionalDebt: -4 },
+      resultText:
+        "RESPONSE ACCEPTED.\n\n" +
+        "Institutional Debt -4.\n\n" +
+        "HERMES INTERRUPTION 004 LOGGED.\n\n" +
+        "(Management does not postpone the meeting.)",
+    },
+  },
+
+  {
+    id: "cobol-custadj-01",
+    kind: "choice",
+    title: "Batch Job Abend: CUSTADJ",
+    priority: "URGENT",
+    availableFromPeriod: 6,
+    executiveMessage:
+      "JOB CXBILL01 ABENDED\n\n" +
+      "Program: CUSTADJ\n" +
+      "Abend: S0C7\n\n" +
+      "Last successful record:\n" +
+      "ACCT=004182 REGION=04 TYPE=R\n\n" +
+      "SOURCE (CUSTADJ.cbl):\n" +
+      "  01  CUSTOMER-REC.\n" +
+      "      05  ACCOUNT-NO       PIC 9(6).\n" +
+      "      05  REGION-CODE      PIC 99.\n" +
+      "      05  ADJUSTMENT       PIC 9(5)V99.\n" +
+      "  ...\n" +
+      "  COMPUTE TOTAL-ADJ =\n" +
+      "      TOTAL-ADJ + ADJUSTMENT\n\n" +
+      'DUMP:\n' +
+      '  ADJUSTMENT = "12A4.50"',
+    choices: [
+      {
+        id: "skip-invalid-record",
+        label: "1=Skip invalid record and resubmit job",
+        immediate: { efficiency: 6, executiveConfidence: 10 },
+        delayed: [
+          {
+            periodsLater: 3,
+            label: "Skipped adjustment record surfaces as unexplained billing variance",
+            effects: { institutionalDebt: 8, complaints: 6 },
+          },
+        ],
+        resultText:
+          "JOB RESUBMITTED. BATCH COMPLETED.\n\n" +
+          "Efficiency +6. Executive Confidence +10.\n\n" +
+          "CPF9898 PROCESS OPTIMIZED SUCCESSFULLY.\n\n" +
+          "(Account 004182's adjustment was never applied. Nobody asked.)",
+      },
+      {
+        id: "change-field-alphanumeric",
+        label: "2=Change ADJUSTMENT to alphanumeric (PIC X)",
+        immediate: { efficiency: 2 },
+        delayed: [
+          {
+            periodsLater: 3,
+            label: "Downstream COMPUTE statements on ADJUSTMENT begin failing across the batch suite",
+            effects: { institutionalDebt: 14, regulatoryRisk: 6 },
+          },
+        ],
+        resultText:
+          "CHANGE APPLIED.\n\n" +
+          "Job completes without abending.\n\n" +
+          "(ADJUSTMENT is now text. Every other program that does arithmetic\n" +
+          "on it does not know that yet.)",
+      },
+      {
+        id: "validate-before-compute",
+        label: "3=Add input validation before COMPUTE",
+        immediate: { efficiency: -2, executiveConfidence: -3 },
+        resultText:
+          "CHANGE REQUEST SUBMITTED.\n\n" +
+          "Program: CUSTADJ\n\n" +
+          "CPF9020 CHANGE REQUEST REJECTED\n\n" +
+          "Reason:\n" +
+          "Program CUSTADJ is designated BUSINESS CRITICAL / CHANGE FROZEN.\n\n" +
+          "Next approved maintenance window: NOV 14.\n\n" +
+          "Efficiency -2. Executive Confidence -3.\n\n" +
+          "(The correct fix. It will have to wait.)",
+      },
+      {
+        id: "increase-memory",
+        label: "4=Increase batch memory allocation",
+        immediate: { profit: -3 },
+        resultText:
+          "MEMORY ALLOCATION INCREASED.\n\n" +
+          "Job CXBILL01 abends again at the same record next cycle.\n\n" +
+          "S0C7 is not a memory error.",
+      },
+    ],
   },
 ];
 

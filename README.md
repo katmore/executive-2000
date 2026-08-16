@@ -17,6 +17,9 @@ npm run dev
 
 Other scripts: `npm run build`, `npm run typecheck`, `npm run preview`.
 
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the codebase architecture and how
+to extend it (adding scenarios, artifacts, legacy pages, etc).
+
 ## License
 
 See [LICENSE](LICENSE).

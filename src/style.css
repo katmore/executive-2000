@@ -207,6 +207,122 @@ body {
   text-decoration: underline;
 }
 
+/* ---- Legacy web pages: deliberately NOT terminal-styled, to sell "different era, different system" ---- */
+
+.legacy-browser {
+  position: fixed;
+  inset: 0;
+  background: #ece9d8;
+  color: #000;
+  font-family: "Times New Roman", Times, serif;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.legacy-chrome {
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  padding: 6px 10px;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.legacy-nav-icons {
+  color: #666;
+  white-space: nowrap;
+}
+
+.legacy-address-bar {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #808080;
+  padding: 3px 6px;
+  color: #333;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.legacy-return-btn {
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 12px;
+  background: #d4d0c8;
+  border: 1px outset #d4d0c8;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.legacy-return-btn:active {
+  border-style: inset;
+}
+
+.legacy-content {
+  flex: 1;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.legacy-content-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 24px 30px;
+}
+
+.legacy-topbar {
+  background: #000080;
+  color: #fff;
+  padding: 5px 10px;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.legacy-muted {
+  color: #666;
+  font-size: 12px;
+}
+
+.legacy-blank {
+  display: inline-block;
+  min-width: 3em;
+  border-bottom: 1px solid #000;
+}
+
+.legacy-error-box {
+  margin: 24px 0 0 0;
+  max-width: 420px;
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", sans-serif;
+  font-size: 12px;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.legacy-error-title {
+  background: linear-gradient(to right, #0a246a, #a6caf0);
+  color: #fff;
+  font-weight: bold;
+  padding: 3px 6px;
+}
+
+.legacy-error-body {
+  padding: 12px;
+}
+
+.legacy-1998 h1 {
+  font-size: 22px;
+}
+
+.legacy-1998 a {
+  color: #0000ee;
+}
+
 .fkey .fkey-num {
   color: var(--term-fg-white);
 }

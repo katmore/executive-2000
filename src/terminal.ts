@@ -23,6 +23,12 @@ export function fmtBody(text: string): string {
   return esc(text);
 }
 
+/** Clears footer/menu keyboard handlers — for screens that render outside renderTerminal entirely. */
+export function clearGlobalHandlers(): void {
+  currentActions = [];
+  activeMenu = null;
+}
+
 let currentActions: FooterAction[] = [];
 let keyHandlerBound = false;
 

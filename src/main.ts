@@ -2,11 +2,13 @@ import "./style.css";
 import { createInitialState, rankTitle, applyDelta, type GameState } from "./state";
 import { LocalStorageStore } from "./storage";
 import { advancePeriod, scheduleEffect } from "./effects";
+import { LEGACY_PAGES } from "./legacy/pages";
 import { availableScenarios, getScenario } from "./scenarios/data";
 import type { Choice, ChoiceQuestionOption, DocumentReviewScenario } from "./scenarios/types";
 import {
   appendSelectionInput,
   bindInputs,
+  clearGlobalHandlers,
   fmtBody,
   insertAfter,
   renderMenuItems,
@@ -23,6 +25,7 @@ type Screen =
   | { type: "scenario-choice"; id: string }
   | { type: "scenario-result"; text: string }
   | { type: "doc-intro"; id: string }
+  | { type: "legacy-web"; scenarioId: string; pageId: string }
   | { type: "doc-form"; id: string }
   | { type: "doc-scope-warning"; id: string; answers: Record<string, string> }
   | { type: "doc-result"; text: string }
@@ -78,6 +81,8 @@ class Game {
         );
       case "doc-intro":
         return this.renderDocIntro(this.screen.id);
+      case "legacy-web":
+        return this.renderLegacyWeb(this.screen.scenarioId, this.screen.pageId);
       case "doc-form":
         return this.renderDocForm(this.screen.id);
       case "doc-scope-warning":
@@ -314,12 +319,14 @@ class Game {
 
   renderDocIntro(id: string): void {
     const sc = getScenario(id) as DocumentReviewScenario;
+    const artifacts = sc.artifacts ?? [];
+    const webRefs = sc.webReferences ?? [];
 
     const body =
       `DOCUMENT REVIEW REQUIRED\n\n` +
       `Reference: ${sc.id.toUpperCase()}\n\n` +
       `EXECUTIVE MESSAGE:\n${sc.executiveMessage}\n\n` +
-      `Supporting documents (select to download):`;
+      `Supporting resources (select):`;
 
     const actions: FooterAction[] = [
       { key: "F10", label: "Proceed to response", action: () => this.goto({ type: "doc-form", id }) },
@@ -333,20 +340,50 @@ class Game {
       footerActions: actions,
     });
 
-    const menuList = insertAfter(terminalScreenEl(), "div", "menu-list");
-    renderMenuItems(
-      menuList,
-      sc.artifacts.map((a, i) => ({
+    const menuItems = [
+      ...artifacts.map((a, i) => ({
         key: `${i + 1}`,
         label: a.filename,
         action: () => {
           a.generate(this.state);
         },
-      }))
-    );
+      })),
+      ...webRefs.map((w, i) => ({
+        key: `${artifacts.length + i + 1}`,
+        label: `[WEB] ${w.label}`,
+        action: () => this.goto({ type: "legacy-web", scenarioId: id, pageId: w.pageId }),
+      })),
+    ];
+
+    const menuList = insertAfter(terminalScreenEl(), "div", "menu-list");
+    renderMenuItems(menuList, menuItems);
 
     const note = insertAfter(menuList, "pre", "terminal-block");
-    note.textContent = "\nThese documents cannot be viewed in EMS.";
+    note.textContent = "\nFile-based documents cannot be viewed in EMS. Web references open in a separate window.";
+  }
+
+  renderLegacyWeb(scenarioId: string, pageId: string): void {
+    clearGlobalHandlers();
+    const page = LEGACY_PAGES[pageId];
+    if (!page) throw new Error(`Unknown legacy page: ${pageId}`);
+
+    const app = document.getElementById("app")!;
+    app.innerHTML = `
+      <div class="legacy-browser">
+        <div class="legacy-chrome">
+          <span class="legacy-nav-icons">&#9664; Back &nbsp; &#9654; Forward &nbsp; &#8635; Refresh</span>
+          <span class="legacy-address-bar">${page.url}</span>
+          <button class="legacy-return-btn" id="legacy-return">Return to EMS Terminal</button>
+        </div>
+        <div class="legacy-content">
+          <div class="legacy-content-inner-wrap">${page.bodyHtml}</div>
+        </div>
+      </div>
+    `;
+
+    document
+      .getElementById("legacy-return")!
+      .addEventListener("click", () => this.goto({ type: "doc-intro", id: scenarioId }));
   }
 
   renderDocForm(id: string): void {

@@ -90,6 +90,42 @@ export const SCENARIOS: Scenario[] = [
   },
 
   {
+    id: "refund-policy-reference",
+    kind: "document-review",
+    title: "Refund Exception Threshold Confirmation",
+    priority: "MEDIUM",
+    availableFromPeriod: 3,
+    executiveMessage:
+      "Regional is asking what dollar threshold requires Director\n" +
+      "approval on a refund exception before they escalate one.\n" +
+      "Confirm the threshold against the policy source.",
+    webReferences: [
+      { id: "current", label: "Refund Exception Policy (current)", pageId: "refund-policy-current" },
+      {
+        id: "archive",
+        label: "Refund Exception Policy Archive (2019, cached)",
+        pageId: "refund-policy-archive",
+      },
+    ],
+    questions: [
+      {
+        id: "threshold",
+        prompt: "Refund exception approval threshold requiring Regional Director sign-off:",
+        answer: "$250",
+        aliases: ["250", "250.00", "$250.00"],
+      },
+    ],
+    onCorrect: {
+      immediate: { executiveConfidence: 3 },
+      resultText:
+        "RESPONSE ACCEPTED.\n\n" +
+        "Executive Confidence +3.\n\n" +
+        "(The current policy page has been broken long enough that the archive\n" +
+        "is now the more reliable source. Nobody has filed a ticket.)",
+    },
+  },
+
+  {
     id: "cx-risk-review",
     kind: "document-review",
     title: "Board Question: Refund Expense Driver",

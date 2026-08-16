@@ -28,6 +28,12 @@ export interface ArtifactRef {
   generate: (state: GameState) => void | Promise<void>;
 }
 
+export interface WebReference {
+  id: string;
+  label: string;
+  pageId: string;
+}
+
 interface ScenarioBase {
   id: string;
   title: string;
@@ -74,7 +80,8 @@ export interface ChoiceQuestion {
 
 export interface DocumentReviewScenario extends ScenarioBase {
   kind: "document-review";
-  artifacts: ArtifactRef[];
+  artifacts?: ArtifactRef[];
+  webReferences?: WebReference[];
   /** Free-text fill-in questions validated against a known answer (mutually exclusive with choiceQuestion). */
   questions?: DocumentQuestion[];
   onCorrect?: {

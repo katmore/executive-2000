@@ -3,7 +3,7 @@ import { createInitialState, rankTitle, applyDelta, type GameState } from "./sta
 import { LocalStorageStore } from "./storage";
 import { advancePeriod, scheduleEffect } from "./effects";
 import { LEGACY_PAGES } from "./legacy/pages";
-import { availableScenarios, getScenario } from "./scenarios/data";
+import { availableScenarios, getScenario, SCENARIOS } from "./scenarios/data";
 import type { Choice, ChoiceQuestionOption, DocumentReviewScenario } from "./scenarios/types";
 import {
   appendSelectionInput,
@@ -231,6 +231,10 @@ class Game {
     });
 
     if (scenarios.length === 0) {
+      const allDone = SCENARIOS.length > 0 && SCENARIOS.every((sc) => s.completedScenarios.includes(sc.id));
+      if (allDone) {
+        return this.renderEnding();
+      }
       const tail = insertAfter(terminalScreenEl(), "pre", "terminal-block");
       tail.textContent = "\n  (No open items. Advance to the next period.)";
       return;
@@ -245,6 +249,33 @@ class Game {
         action: () => this.openScenario(sc.id),
       }))
     );
+  }
+
+  renderEnding(): void {
+    const s = this.state;
+    const body =
+      `END OF CURRENT REVIEW CYCLE\n\n` +
+      `All open items have been resolved for this build of\n` +
+      `Executive Launch 2000.\n\n` +
+      `${"-".repeat(60)}\n` +
+      `FINAL POSITION\n` +
+      this.metricLine("Profit", s.profit) + "\n" +
+      this.metricLine("Efficiency", s.efficiency) + "\n" +
+      this.metricLine("Executive Confidence", s.executiveConfidence) + "\n" +
+      `  ${"Rank".padEnd(24, " ")}${rankTitle(s)}\n\n` +
+      `Leadership considers this a successful quarter.\n\n` +
+      `Customer Health, Institutional Debt, and several other\n` +
+      `metrics were never part of this review.\n\n` +
+      `Thank you for playing this build.`;
+
+    renderTerminal({
+      sys: "PRD01",
+      headerLeft: "END OF DEMO",
+      bodyHtml: fmtBody(body),
+      footerActions: [
+        { key: "F12", label: "Return to menu", action: () => this.goto({ type: "main-menu" }) },
+      ],
+    });
   }
 
   openScenario(id: string): void {

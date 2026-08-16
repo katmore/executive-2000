@@ -1,4 +1,6 @@
+import { generateActionPlanDoc } from "../artifacts/actionPlanDoc";
 import { generateCustomerWorkbook } from "../artifacts/customerWorkbook";
+import { generateCxRiskReviewPdf } from "../artifacts/cxRiskReviewPdf";
 import type { Scenario } from "./types";
 
 export const SCENARIOS: Scenario[] = [
@@ -58,8 +60,7 @@ export const SCENARIOS: Scenario[] = [
       "Finance flagged a cost variance in Customer Operations.\n" +
       "Determine which operating region generated the largest\n" +
       "increase in support cost this quarter, and report back.",
-    documents: ["CUSTOMER_OPERATIONS_Q3.xlsx"],
-    onArtifactRequested: (state) => generateCustomerWorkbook(state),
+    artifacts: [{ filename: "CUSTOMER_OPERATIONS_Q3.xls", generate: generateCustomerWorkbook }],
     questions: [
       {
         id: "region",
@@ -85,6 +86,86 @@ export const SCENARIOS: Scenario[] = [
         "Executive Confidence -3. Review cycle extended.\n" +
         "Institutional Debt -6. Regulatory Risk -4.\n\n" +
         "(Someone, eventually, will have to read this.)",
+    },
+  },
+
+  {
+    id: "cx-risk-review",
+    kind: "document-review",
+    title: "Board Question: Refund Expense Driver",
+    priority: "HIGH",
+    availableFromPeriod: 4,
+    executiveMessage:
+      'The CEO wants a one-line answer before the board call:\n\n' +
+      '  "What is driving increased refund expense?"\n\n' +
+      "Review the supporting documentation before you respond.\n" +
+      "The three sources do not entirely agree with each other.",
+    artifacts: [
+      { filename: "CUSTOMER_OPERATIONS_Q3.xls", generate: generateCustomerWorkbook },
+      { filename: "CX_RISK_REVIEW.pdf", generate: generateCxRiskReviewPdf },
+      { filename: "CX_ACTION_PLAN_FINAL_v4.doc", generate: generateActionPlanDoc },
+    ],
+    choiceQuestion: {
+      prompt: 'CEO QUESTION:\n\n  "What is driving increased refund expense?"',
+      options: [
+        {
+          id: "fraud",
+          label: "1=Increased fraud",
+          immediate: { executiveConfidence: 5, institutionalDebt: 8 },
+          delayed: [
+            {
+              periodsLater: 3,
+              label: "Refund expense driver resurfaces; fraud explanation did not hold up",
+              effects: { complaints: 10, regulatoryRisk: 6 },
+            },
+          ],
+          resultText:
+            "CEO ACCEPTS EXPLANATION.\n\n" +
+            "Executive Confidence +5.\n\n" +
+            "(The documentation does not support this. Nobody asked for the documentation.)",
+        },
+        {
+          id: "seasonal",
+          label: "2=Seasonal variation",
+          immediate: { executiveConfidence: 5, institutionalDebt: 10 },
+          delayed: [
+            {
+              periodsLater: 3,
+              label: "Refund expense driver resurfaces; no seasonal pattern found",
+              effects: { complaints: 10, regulatoryRisk: 6 },
+            },
+          ],
+          resultText:
+            "CEO ACCEPTS EXPLANATION.\n\n" +
+            "Executive Confidence +5.\n\n" +
+            "(Refund volume has no seasonal pattern in any of the three documents. This will surface again.)",
+        },
+        {
+          id: "manual-review",
+          label: "3=Reduced manual review",
+          immediate: { executiveConfidence: -6, regulatoryRisk: -5, institutionalDebt: -10 },
+          delayed: [
+            {
+              periodsLater: 3,
+              label: "Manual review quietly reinstated; complaint volume stabilizes",
+              effects: { complaints: -6 },
+            },
+          ],
+          resultText:
+            "CEO IS NOT PLEASED.\n\n" +
+            "Executive Confidence -6. Institutional Debt -10. Regulatory Risk -5.\n\n" +
+            "(The correct answer. Sequence 020 is now a subject of discussion.)",
+        },
+        {
+          id: "insufficient-data",
+          label: "4=Insufficient data to determine",
+          immediate: { executiveConfidence: 2, institutionalDebt: 6 },
+          resultText:
+            "CEO REQUESTS FURTHER ANALYSIS.\n\n" +
+            "Executive Confidence +2. Follow-up scheduled.\n\n" +
+            "(This buys time. It does not buy an answer.)",
+        },
+      ],
     },
   },
 ];

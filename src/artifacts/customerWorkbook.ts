@@ -2,9 +2,9 @@ import * as XLSX from "xlsx";
 import type { GameState } from "../state";
 
 /**
- * Generates CUSTOMER_OPERATIONS_Q3.xlsx and triggers a browser download.
- * Content is authored/deterministic for the MVP rather than derived from
- * live game state, per the design note preferring authored scenarios.
+ * Generates CUSTOMER_OPERATIONS_Q3.xls (legacy BIFF8 binary format — no
+ * OOXML/zip) and triggers a browser download. Content is authored/deterministic
+ * for the MVP rather than derived from live game state.
  */
 export function generateCustomerWorkbook(_state: GameState): void {
   const wb = XLSX.utils.book_new();
@@ -36,5 +36,5 @@ export function generateCustomerWorkbook(_state: GameState): void {
   ]);
   XLSX.utils.book_append_sheet(wb, notes, "Notes");
 
-  XLSX.writeFile(wb, "CUSTOMER_OPERATIONS_Q3.xlsx");
+  XLSX.writeFile(wb, "CUSTOMER_OPERATIONS_Q3.xls", { bookType: "biff8" });
 }

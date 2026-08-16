@@ -3,7 +3,7 @@ import { createInitialState, rankTitle, applyDelta, type GameState } from "./sta
 import { LocalStorageStore } from "./storage";
 import { advancePeriod, scheduleEffect } from "./effects";
 import { availableScenarios, getScenario } from "./scenarios/data";
-import type { Choice, DocumentReviewScenario, DocumentQuestion } from "./scenarios/types";
+import type { Choice, ChoiceQuestionOption, DocumentReviewScenario } from "./scenarios/types";
 import {
   appendSelectionInput,
   bindInputs,
@@ -315,27 +315,14 @@ class Game {
   renderDocIntro(id: string): void {
     const sc = getScenario(id) as DocumentReviewScenario;
 
-    let body = `DOCUMENT REVIEW REQUIRED\n\n`;
-    body += `Reference: ${sc.id.toUpperCase()}\n\n`;
-    body += `EXECUTIVE MESSAGE:\n${sc.executiveMessage}\n\n`;
-    body += `Supporting documents:\n`;
-    for (const doc of sc.documents) body += `  ${doc}\n`;
-    body += `\nThese documents cannot be viewed in EMS.\n`;
+    const body =
+      `DOCUMENT REVIEW REQUIRED\n\n` +
+      `Reference: ${sc.id.toUpperCase()}\n\n` +
+      `EXECUTIVE MESSAGE:\n${sc.executiveMessage}\n\n` +
+      `Supporting documents (select to download):`;
 
     const actions: FooterAction[] = [
-      {
-        key: "F6",
-        label: "Download Package",
-        action: () => {
-          sc.onArtifactRequested(this.state);
-          this.render();
-        },
-      },
-      {
-        key: "F10",
-        label: "Proceed to response",
-        action: () => this.goto({ type: "doc-form", id }),
-      },
+      { key: "F10", label: "Proceed to response", action: () => this.goto({ type: "doc-form", id }) },
       { key: "F12", label: "Return", action: () => this.goto({ type: "work-queue" }) },
     ];
 
@@ -345,39 +332,46 @@ class Game {
       bodyHtml: fmtBody(body),
       footerActions: actions,
     });
+
+    const menuList = insertAfter(terminalScreenEl(), "div", "menu-list");
+    renderMenuItems(
+      menuList,
+      sc.artifacts.map((a, i) => ({
+        key: `${i + 1}`,
+        label: a.filename,
+        action: () => {
+          a.generate(this.state);
+        },
+      }))
+    );
+
+    const note = insertAfter(menuList, "pre", "terminal-block");
+    note.textContent = "\nThese documents cannot be viewed in EMS.";
   }
 
   renderDocForm(id: string): void {
     const sc = getScenario(id) as DocumentReviewScenario;
 
-    let body = `EXECUTIVE RESPONSE REQUIRED\n\n`;
-    body += `Based on supporting documentation, answer below.\n\n`;
+    if (sc.choiceQuestion) {
+      return this.renderDocChoiceQuestion(id, sc);
+    }
 
-    const inputsHtml = sc.questions
-      .map(
-        (q: DocumentQuestion) =>
-          `  ${q.prompt}\n  <span class="term-input-row-holder"></span>`
-      )
-      .join("\n");
+    const questions = sc.questions ?? [];
+    let body = `EXECUTIVE RESPONSE REQUIRED\n\nBased on supporting documentation, answer below.\n\n`;
+    for (const q of questions) body += `  ${q.prompt}\n\n`;
 
     renderTerminal({
       sys: "PRD01",
       headerLeft: sc.title.toUpperCase(),
-      bodyHtml: fmtBody(body) + inputsHtml,
+      bodyHtml: fmtBody(body),
       footerActions: [
-        { key: "F6", label: "Re-download", action: () => sc.onArtifactRequested(this.state) },
         { key: "F10", label: "Submit", action: () => this.submitDocForm(id) },
-        { key: "F12", label: "Return", action: () => this.goto({ type: "work-queue" }) },
+        { key: "F12", label: "Return to documents", action: () => this.goto({ type: "doc-intro", id }) },
       ],
     });
 
-    // Replace placeholder spans with real inputs, since <pre> can't easily
-    // host layout-heavy markup — build inputs as a form below the pre block.
-    const app = document.getElementById("app")!;
-    const screenEl = app.querySelector(".terminal-screen")!;
-    const form = document.createElement("div");
-    form.style.padding = "0 0 0.5rem 0";
-    for (const q of sc.questions) {
+    const form = insertAfter(terminalScreenEl(), "div");
+    for (const q of questions) {
       const row = document.createElement("div");
       row.className = "term-input-row";
       const label = document.createElement("span");
@@ -389,16 +383,59 @@ class Game {
       row.appendChild(input);
       form.appendChild(row);
     }
-    screenEl.after(form);
+  }
+
+  renderDocChoiceQuestion(id: string, sc: DocumentReviewScenario): void {
+    const cq = sc.choiceQuestion!;
+    const body = `EXECUTIVE RESPONSE REQUIRED\n\n${cq.prompt}\n\nChoose your response below.`;
+
+    renderTerminal({
+      sys: "PRD01",
+      headerLeft: sc.title.toUpperCase(),
+      bodyHtml: fmtBody(body),
+      footerActions: [
+        { key: "F12", label: "Return to documents", action: () => this.goto({ type: "doc-intro", id }) },
+      ],
+    });
+
+    const menuList = insertAfter(terminalScreenEl(), "div", "menu-list");
+    renderMenuItems(
+      menuList,
+      cq.options.map((opt, i) => ({
+        key: `${i + 1}`,
+        label: opt.label.replace(/^\d+=/, ""),
+        action: () => this.resolveChoiceQuestion(id, opt),
+      }))
+    );
+  }
+
+  resolveChoiceQuestion(scenarioId: string, option: ChoiceQuestionOption): void {
+    const s = this.state;
+    if (option.immediate) applyDelta(s, option.immediate);
+    if (option.delayed) {
+      for (const d of option.delayed) {
+        scheduleEffect(s, {
+          periodsLater: d.periodsLater,
+          source: `${scenarioId}:${option.id}`,
+          label: d.label,
+          effects: d.effects,
+        });
+      }
+    }
+    s.completedScenarios.push(scenarioId);
+    s.decisions.push({ period: s.period, scenarioId, choiceId: option.id });
+    this.save();
+    this.goto({ type: "doc-result", text: option.resultText });
   }
 
   submitDocForm(id: string): void {
     const sc = getScenario(id) as DocumentReviewScenario;
+    const questions = sc.questions ?? [];
     const inputs = bindInputs();
     const answers: Record<string, string> = {};
     let allCorrect = true;
 
-    for (const q of sc.questions) {
+    for (const q of questions) {
       const raw = (inputs[q.id]?.value ?? "").trim().toUpperCase();
       answers[q.id] = raw;
       const accepted = [q.answer.toUpperCase(), ...(q.aliases ?? []).map((a) => a.toUpperCase())];
@@ -457,6 +494,7 @@ class Game {
   finalizeDocReview(id: string, withUnsolicited: boolean): void {
     const sc = getScenario(id) as DocumentReviewScenario;
     const s = this.state;
+    if (!sc.onCorrect) throw new Error(`${id}: finalizeDocReview requires onCorrect`);
 
     if (sc.onCorrect.immediate) applyDelta(s, sc.onCorrect.immediate);
     if (sc.onCorrect.delayed) {

@@ -23,6 +23,11 @@ export interface ProcessStep {
   required: boolean;
 }
 
+export interface ArtifactRef {
+  filename: string;
+  generate: (state: GameState) => void | Promise<void>;
+}
+
 interface ScenarioBase {
   id: string;
   title: string;
@@ -52,17 +57,34 @@ export interface UnsolicitedObservation {
   resultText: string;
 }
 
+/** A discrete answer option to a ChoiceQuestion — each carries its own effects, not a pass/fail check. */
+export interface ChoiceQuestionOption {
+  id: string;
+  label: string;
+  immediate?: MetricDelta;
+  delayed?: DelayedEffectSpec[];
+  resultText: string;
+}
+
+/** A CEO-style question with several plausible answers of differing political cost, per the cross-document mechanic. */
+export interface ChoiceQuestion {
+  prompt: string;
+  options: ChoiceQuestionOption[];
+}
+
 export interface DocumentReviewScenario extends ScenarioBase {
   kind: "document-review";
-  documents: string[];
-  questions: DocumentQuestion[];
-  onArtifactRequested: (state: GameState) => void;
-  onCorrect: {
+  artifacts: ArtifactRef[];
+  /** Free-text fill-in questions validated against a known answer (mutually exclusive with choiceQuestion). */
+  questions?: DocumentQuestion[];
+  onCorrect?: {
     immediate?: MetricDelta;
     delayed?: DelayedEffectSpec[];
     resultText: string;
   };
   unsolicited?: UnsolicitedObservation;
+  /** A multiple-choice dilemma with differentiated effects (mutually exclusive with questions). */
+  choiceQuestion?: ChoiceQuestion;
 }
 
 export type Scenario = ChoiceScenario | DocumentReviewScenario;
